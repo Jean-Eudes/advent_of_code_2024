@@ -1,0 +1,259 @@
+struct StdOut {
+    first_element: bool,
+    result: String,
+}
+
+impl StdOut {
+    fn new() -> Self {
+        StdOut {
+            first_element: true,
+            result: String::from(""),
+        }
+    }
+    fn print(&mut self, value: usize) {
+        if self.first_element {
+            self.result.push_str(format!("{value}").as_str());
+            self.first_element = false;
+        } else {
+            self.result.push_str(format!(",{value}").as_str());
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Opcode {
+    Adv(Operande),
+    Bxl(Operande),
+    Bst(Operande),
+    Jnz(Operande),
+    Bxc(),
+    Out(Operande),
+    Bdv(Operande),
+    Cdv(Operande),
+}
+
+impl From<(u32, u32)> for Opcode {
+    fn from(value: (u32, u32)) -> Self {
+        match value.0 {
+            0 => Opcode::Adv(Operande::from(value.1)),
+            1 => Opcode::Bxl(Operande::from(value.1)),
+            2 => Opcode::Bst(Operande::from(value.1)),
+            3 => Opcode::Jnz(Operande::from(value.1)),
+            4 => Opcode::Bxc(),
+            5 => Opcode::Out(Operande::from(value.1)),
+            6 => Opcode::Bdv(Operande::from(value.1)),
+            _ => Opcode::Cdv(Operande::from(value.1)),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Operande {
+    _0,
+    _1,
+    _2,
+    _3,
+    _4,
+    _5,
+    _6,
+    _7,
+}
+
+impl Operande {
+    fn literal(&self) -> usize {
+        match self {
+            Operande::_0 => 0,
+            Operande::_1 => 1,
+            Operande::_2 => 2,
+            Operande::_3 => 3,
+            Operande::_4 => 4,
+            Operande::_5 => 5,
+            Operande::_6 => 6,
+            Operande::_7 => 7,
+        }
+    }
+    fn combo(&self, register: &Register) -> usize {
+        match self {
+            Operande::_0 | Operande::_1 | Operande::_2 | Operande::_3 => self.literal(),
+            Operande::_4 => register.a,
+            Operande::_5 => register.b,
+            Operande::_6 => register.c,
+            Operande::_7 => todo!(),
+        }
+    }
+}
+
+impl From<u32> for Operande {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => Operande::_0,
+            1 => Operande::_1,
+            2 => Operande::_2,
+            3 => Operande::_3,
+            4 => Operande::_4,
+            5 => Operande::_5,
+            6 => Operande::_6,
+            _ => Operande::_7,
+        }
+    }
+}
+
+struct Programme<'a> {
+    instructions: Vec<Opcode>,
+    kernel: &'a mut Kernel,
+    pointer: usize,
+}
+
+impl<'a> Programme<'a> {
+    fn new(kernel: &'a mut Kernel, code: String) -> Self {
+        let mut instructions: Vec<Opcode> = vec![];
+        let code: Vec<&str> = code.split(",").collect();
+        for element in code.chunks(2) {
+            let opcode = Opcode::from((
+                element[0].parse::<u32>().unwrap(),
+                element[1].parse::<u32>().unwrap(),
+            ));
+            instructions.push(opcode);
+        }
+
+        Programme {
+            instructions,
+            kernel,
+            pointer: 0,
+        }
+    }
+
+    fn run(&mut self, a: usize, b: usize, c: usize) -> String {
+        self.kernel.initialize(a, b, c);
+        let mut iter = self.enumerate();
+        while let Some(_) = iter.next() {}
+        return self.kernel.stdout.result.clone();
+    }
+}
+
+impl<'a> Iterator for Programme<'a> {
+    type Item = ();
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let instruction = self.instructions.get(self.pointer);
+        if let Some(opcode) = instruction {
+            self.pointer = self.kernel.evaluate(&opcode, self.pointer);
+            return Some(());
+        }
+        None
+    }
+}
+
+#[derive(Debug)]
+struct Register {
+    a: usize,
+    b: usize,
+    c: usize,
+}
+
+struct Kernel {
+    register: Register,
+    stdout: StdOut,
+}
+
+impl Kernel {
+    fn new() -> Self {
+        let register = Register { a: 0, b: 0, c: 0 };
+        Kernel {
+            register,
+            stdout: StdOut::new(),
+        }
+    }
+
+    fn initialize(&mut self, a: usize, b: usize, c: usize) {
+        self.register.a = a;
+        self.register.b = b;
+        self.register.c = c;
+        self.stdout.first_element = true;
+        self.stdout.result = String::from("");
+    }
+
+    fn evaluate(&mut self, opcode: &Opcode, pointer: usize) -> usize {
+        let register = &mut self.register;
+        match opcode {
+            Opcode::Adv(operande) => {
+                register.a = register.a / 2_usize.pow(operande.combo(register) as u32);
+            }
+            Opcode::Bxl(operande) => {
+                register.b = register.b ^ operande.literal();
+            }
+            Opcode::Bst(operande) => {
+                register.b = operande.combo(register) % 8;
+            }
+            Opcode::Jnz(operande) => {
+                if register.a != 0 {
+                    return operande.literal();
+                }
+            }
+            Opcode::Bxc() => {
+                register.b = register.b ^ register.c;
+            }
+            Opcode::Out(operande) => {
+                let a = operande.combo(register);
+                self.stdout.print(a % 8);
+            }
+            Opcode::Bdv(operande) => {
+                register.b = register.a / 2_usize.pow(operande.combo(register) as u32);
+            }
+            Opcode::Cdv(operande) => {
+                register.b = register.a / 2_usize.pow(operande.combo(register) as u32);
+            }
+        };
+        return pointer + 1;
+    }
+}
+
+fn main() {
+    println!("Hello, world!");
+
+    println!("end 6");
+    let instructions = vec![(0, 1), (5, 4), (3, 0)];
+
+    let instructions: Vec<Opcode> = instructions.into_iter().map(|i| Opcode::from(i)).collect();
+    let mut kernel = Kernel::new();
+    println!("{:?}", &kernel.register);
+    let mut program = Programme {
+        instructions,
+        kernel: &mut kernel,
+        pointer: 0,
+    };
+    program.run(2024, 0, 0);
+    println!("end7");
+
+    println!("{:?}", &kernel.register);
+    let mut program = Programme::new(&mut kernel, String::from("0,1,5,4,3,0"));
+    program.run(2024, 0, 0);
+    println!("end8");
+    let mut program = Programme::new(&mut kernel, String::from("0,1,5,4,3,0"));
+    let result = program.run(729, 0, 0);
+    println!("{result}");
+
+    for i in 0..500_000_000 {
+        let mut program = Programme::new(&mut kernel, String::from("0,1,5,4,3,0"));
+        let result = program.run(i, 0, 0);
+        if result == "0,1,5,4,3,0" {
+            println!("{}", i);
+        }
+        if i % 1_000_000 == 0 {
+            println!("{i}");
+        }
+    }
+
+    println!("end8");
+    let mut program = Programme::new(&mut kernel, String::from("4,6,3,5,6,3,5,2,1,0"));
+    program.run(729, 0, 0);
+
+    println!("fin");
+
+    // register.evaluate(Opcode::Adv(Operande::_3));
+    // register.evaluate(Opcode::Bxl(Operande::_3));
+    // register.evaluate(Opcode::Bxc());
+    // self.program.iter
+    // register.evaluate(Opcode::Bdv(Operande::_3));
+    // register.evaluate(Opcode::Cdv(Operande::_3));
+}
