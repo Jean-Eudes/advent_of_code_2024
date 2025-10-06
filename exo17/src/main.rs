@@ -10,7 +10,7 @@ impl StdOut {
             result: String::from(""),
         }
     }
-    fn print(&mut self, value: usize) {
+    fn print(&mut self, value: u32) {
         if self.first_element {
             self.result.push_str(format!("{value}").as_str());
             self.first_element = false;
@@ -36,7 +36,7 @@ impl Opcode {
     fn evaluate(&self, register: &mut Register, stdout: &mut StdOut, pointer: usize) -> usize {
         match self {
             Opcode::Adv(operande) => {
-                register.a /= 2_usize.pow(operande.combo(register) as u32);
+                register.a /= 2_u32.pow(operande.combo(register));
             }
             Opcode::Bxl(operande) => {
                 register.b ^= operande.literal();
@@ -46,7 +46,7 @@ impl Opcode {
             }
             Opcode::Jnz(operande) => {
                 if register.a != 0 {
-                    return operande.literal();
+                    return usize::try_from(operande.literal()).unwrap();
                 }
             }
             Opcode::Bxc() => {
@@ -57,10 +57,10 @@ impl Opcode {
                 stdout.print(a % 8);
             }
             Opcode::Bdv(operande) => {
-                register.b = register.a / 2_usize.pow(operande.combo(register) as u32);
+                register.b = register.a / 2_u32.pow(operande.combo(register));
             }
             Opcode::Cdv(operande) => {
-                register.b = register.a / 2_usize.pow(operande.combo(register) as u32);
+                register.b = register.a / 2_u32.pow(operande.combo(register));
             }
         };
         pointer + 1
@@ -95,7 +95,7 @@ enum Operande {
 }
 
 impl Operande {
-    fn literal(&self) -> usize {
+    fn literal(&self) -> u32 {
         match self {
             Operande::_0 => 0,
             Operande::_1 => 1,
@@ -107,7 +107,7 @@ impl Operande {
             Operande::_7 => 7,
         }
     }
-    fn combo(&self, register: &Register) -> usize {
+    fn combo(&self, register: &Register) -> u32 {
         match self {
             Operande::_0 | Operande::_1 | Operande::_2 | Operande::_3 => self.literal(),
             Operande::_4 => register.a,
@@ -160,7 +160,7 @@ impl<'a> Programme<'a> {
         }
     }
 
-    fn run(&mut self, a: usize, b: usize, c: usize) -> String {
+    fn run(&mut self, a: u32, b: u32, c: u32) -> String {
         self.register.init(a, b, c);
         let iter = self.enumerate();
         for _ in iter {}
@@ -183,9 +183,9 @@ impl<'a> Iterator for Programme<'a> {
 
 #[derive(Debug)]
 struct Register {
-    a: usize,
-    b: usize,
-    c: usize,
+    a: u32,
+    b: u32,
+    c: u32,
 }
 
 impl Register {
@@ -193,7 +193,7 @@ impl Register {
         Register { a: 0, b: 0, c: 0 }
     }
 
-    fn init(&mut self, a: usize, b: usize, c: usize) {
+    fn init(&mut self, a: u32, b: u32, c: u32) {
         self.a = a;
         self.b = b;
         self.c = c;
@@ -224,16 +224,16 @@ fn main() {
     let result = program.run(729, 0, 0);
     println!("{result}");
 
-    for i in 0..500_000_000 {
-        let mut program = Programme::new(&mut register, String::from("0,1,5,4,3,0"));
-        let result = program.run(i, 0, 0);
-        if result == "0,1,5,4,3,0" {
-            println!("{}", i);
-        }
-        if i % 1_000_000 == 0 {
-            println!("{i}");
-        }
-    }
+    // for i in 0..500_000_000 {
+    //     let mut program = Programme::new(&mut register, String::from("0,1,5,4,3,0"));
+    //     let result = program.run(i, 0, 0);
+    //     if result == "0,1,5,4,3,0" {
+    //         println!("{}", i);
+    //     }
+    //     if i % 1_000_000 == 0 {
+    //         println!("{i}");
+    //     }
+    // }
 
     println!("end8");
     let mut program = Programme::new(&mut register, String::from("4,6,3,5,6,3,5,2,1,0"));
