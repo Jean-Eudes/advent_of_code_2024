@@ -20,7 +20,6 @@ impl StdOut {
     }
 }
 
-#[derive(Debug)]
 enum Opcode {
     Adv(Operande),
     Bxl(Operande),
@@ -82,7 +81,6 @@ impl From<(u32, u32)> for Opcode {
     }
 }
 
-#[derive(Debug)]
 enum Operande {
     _0,
     _1,
@@ -133,14 +131,14 @@ impl From<u32> for Operande {
     }
 }
 
-struct Programme<'a> {
+struct Process<'a> {
     instructions: Vec<Opcode>,
     register: &'a mut Register,
     pointer: usize,
     stdout: StdOut,
 }
 
-impl<'a> Programme<'a> {
+impl<'a> Process<'a> {
     fn new(register: &'a mut Register, code: String) -> Self {
         let mut instructions: Vec<Opcode> = vec![];
         let code: Vec<&str> = code.split(",").collect();
@@ -152,7 +150,7 @@ impl<'a> Programme<'a> {
             instructions.push(opcode);
         }
 
-        Programme {
+        Process {
             instructions,
             register,
             pointer: 0,
@@ -168,7 +166,7 @@ impl<'a> Programme<'a> {
     }
 }
 
-impl<'a> Iterator for Programme<'a> {
+impl<'a> Iterator for Process<'a> {
     type Item = ();
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -181,7 +179,6 @@ impl<'a> Iterator for Programme<'a> {
     }
 }
 
-#[derive(Debug)]
 struct Register {
     a: u32,
     b: u32,
@@ -208,20 +205,20 @@ fn main() {
 
     let instructions: Vec<Opcode> = instructions.into_iter().map(Opcode::from).collect();
     let mut register = Register::new();
-    let mut program = Programme {
+    let mut process = Process {
         instructions,
         register: &mut register,
         pointer: 0,
         stdout: StdOut::new(),
     };
-    program.run(2024, 0, 0);
-    println!("end7");
+    let result = process.run(2024, 0, 0);
+    println!("end7 {}", result);
 
-    let mut program = Programme::new(&mut register, String::from("0,1,5,4,3,0"));
-    program.run(2024, 0, 0);
+    let mut process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
+    process.run(2024, 0, 0);
     println!("end8");
-    let mut program = Programme::new(&mut register, String::from("0,1,5,4,3,0"));
-    let result = program.run(729, 0, 0);
+    let mut process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
+    let result = process.run(729, 0, 0);
     println!("{result}");
 
     // for i in 0..500_000_000 {
@@ -236,7 +233,7 @@ fn main() {
     // }
 
     println!("end8");
-    let mut program = Programme::new(&mut register, String::from("4,6,3,5,6,3,5,2,1,0"));
+    let mut program = Process::new(&mut register, String::from("4,6,3,5,6,3,5,2,1,0"));
     program.run(729, 0, 0);
 
     println!("fin");
