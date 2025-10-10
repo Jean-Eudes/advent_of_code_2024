@@ -158,11 +158,12 @@ impl<'a> Process<'a> {
         }
     }
 
-    fn run(&mut self, a: u32, b: u32, c: u32) -> String {
+    fn run(mut self, a: u32, b: u32, c: u32) -> String {
         self.register.init(a, b, c);
-        let iter = self.enumerate();
+        let this = &mut self;
+        let iter = this.enumerate();
         for _ in iter {}
-        self.stdout.result.clone()
+        self.stdout.result
     }
 }
 
@@ -205,7 +206,7 @@ fn main() {
 
     let instructions: Vec<Opcode> = instructions.into_iter().map(Opcode::from).collect();
     let mut register = Register::new();
-    let mut process = Process {
+    let process = Process {
         instructions,
         register: &mut register,
         pointer: 0,
@@ -214,10 +215,10 @@ fn main() {
     let result = process.run(2024, 0, 0);
     println!("end7 {}", result);
 
-    let mut process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
+    let process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
     process.run(2024, 0, 0);
     println!("end8");
-    let mut process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
+    let process = Process::new(&mut register, String::from("0,1,5,4,3,0"));
     let result = process.run(729, 0, 0);
     println!("{result}");
 
@@ -233,7 +234,7 @@ fn main() {
     // }
 
     println!("end8");
-    let mut program = Process::new(&mut register, String::from("4,6,3,5,6,3,5,2,1,0"));
+    let program = Process::new(&mut register, String::from("4,6,3,5,6,3,5,2,1,0"));
     program.run(729, 0, 0);
 
     println!("fin");
