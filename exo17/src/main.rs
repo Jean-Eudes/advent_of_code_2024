@@ -160,8 +160,7 @@ impl<'a> Process<'a> {
 
     fn run(mut self, a: u32, b: u32, c: u32) -> String {
         self.register.init(a, b, c);
-        let this = &mut self;
-        let iter = this.enumerate();
+        let iter = (&mut self).enumerate();
         for _ in iter {}
         self.stdout.result
     }
